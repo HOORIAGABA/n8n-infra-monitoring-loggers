@@ -1,0 +1,221 @@
+{
+  "name": "Media Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2b6d7f65-d668-405e-bedf-a21b0adb7237",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.currentDate }}",
+        "format": "custom",
+        "customFormat": "dd/MM/yyyy",
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e4673b7a-0c30-4bf1-a38c-fac33230f590",
+      "name": "Date & Time1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8",
+          "mode": "list",
+          "cachedResultName": "Web Team n8n Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 245840508,
+          "mode": "list",
+          "cachedResultName": "MediaBackupSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit#gid=245840508"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "unique_key": "={{ $json.unique_key }}",
+            "Backup Name": "={{ $json.body.database_name }}",
+            "Media": "={{ $json.body.successful_backup }}",
+            "Date": "={{ $json.formattedDate }}"
+          },
+          "matchingColumns": [
+            "unique_key"
+          ],
+          "schema": [
+            {
+              "id": "unique_key",
+              "displayName": "unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Backup Name",
+              "displayName": "Backup Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Media",
+              "displayName": "Media",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        0
+      ],
+      "id": "4e484875-5a3f-400e-b4ca-cb74461bc7aa",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fnSCdUg3fhYq3oJ4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ────────────────────────────────────────────────\n//   n8n Code node – Create unique_key = BackupName_FormattedDate\n// ────────────────────────────────────────────────\n\n// 1. Get the incoming item (webhook usually sends 1 item)\nconst item = $input.first();\n\nif (!item) {\n  return [{ json: { error: \"No input data received\" } }];\n}\n\n// 2. Extract the two fields we need\nlet backupName = $input.first().json.body.database_name || \"\";\nlet formattedDate = $input.first().json.formattedDate || \"\";\n \n// 3. Clean & normalize (remove extra spaces, handle missing values)\nbackupName = String(backupName).trim();\nformattedDate = String(formattedDate).trim();\n \n// Fallbacks if values are missing\nif (!backupName) {\n  backupName = \"UnknownBackup\";\n}\nif (!formattedDate) {\n  // fallback to YYYY-MM-DD if formattedDate is missing\n  const today = new Date();\n  formattedDate = today.toISOString().split('T')[0];\n}\n\n// 4. Create the unique key\nconst unique_key = `${backupName}_${formattedDate}`;\n\n// 5. Return the original data + new field\nreturn [{\n  json: {\n    ...item.json,              // keep all original fields (Backup Name, Db, Media, etc.)\n    unique_key: unique_key,    // the new field you wanted\n    // Optional debug fields – remove later if not needed\n    // debug_backupName: backupName,\n    // debug_formattedDate: formattedDate\n    Database: $input.first().json.body.has_db,\n    media: $input.first().json.body.has_media_dir\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8899f613-354f-4831-93be-5a9a03e2cef7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "7fbc0a33-9f91-47b7-a723-f1b6786c43f5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        0
+      ],
+      "id": "b6a06b07-d563-4341-a6f0-011381a14720",
+      "name": "Webhook",
+      "webhookId": "7fbc0a33-9f91-47b7-a723-f1b6786c43f5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Date & Time1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "versionId": "db683913-31f0-43f4-8789-bb4482a6a88a",
+  "meta": {
+    "instanceId": "bfefda8b8561e999840c4adfac23e386ed9e4cb2425c2372729c1876c847c669"
+  },
+  "id": "vUHQ16B7hnogkL4q",
+  "tags": []
+}

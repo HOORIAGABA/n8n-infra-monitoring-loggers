@@ -1,0 +1,222 @@
+{
+  "name": "DB Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "96417e06-2166-489b-bde1-710bffb467d3",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -496,
+        -48
+      ],
+      "id": "99dfaabe-3766-4975-a52c-823e2fe3c3af",
+      "name": "Webhook",
+      "webhookId": "96417e06-2166-489b-bde1-710bffb467d3"
+    },
+    {
+      "parameters": {
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -48
+      ],
+      "id": "b0521c70-e371-424c-a3f6-e6b75a84f4c8",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.currentDate }}",
+        "format": "custom",
+        "customFormat": "dd/MM/yyyy",
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -48
+      ],
+      "id": "6a7df60e-8043-4018-be6b-1ec2d1741721",
+      "name": "Date & Time1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8",
+          "mode": "list",
+          "cachedResultName": "Web Team n8n Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1986769569,
+          "mode": "list",
+          "cachedResultName": "DbBackupSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit#gid=1986769569"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "unique_key": "={{ $json.unique_key }}",
+            "Backup Name": "={{ $json.body.database_name }}",
+            "DB": "={{ $json.body.successful_backup }}",
+            "Date": "={{ $json.formattedDate }}"
+          },
+          "matchingColumns": [
+            "unique_key"
+          ],
+          "schema": [
+            {
+              "id": "unique_key",
+              "displayName": "unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Backup Name",
+              "displayName": "Backup Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DB",
+              "displayName": "DB",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        432,
+        -48
+      ],
+      "id": "2f0710ac-0226-4bf7-87bc-6aa058753cfb",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fnSCdUg3fhYq3oJ4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ────────────────────────────────────────────────\n//   n8n Code node – Create unique_key = BackupName_FormattedDate\n// ────────────────────────────────────────────────\n\n// 1. Get the incoming item (webhook usually sends 1 item)\nconst item = $input.first();\n\nif (!item) {\n  return [{ json: { error: \"No input data received\" } }];\n}\n\n// 2. Extract the two fields we need\nlet backupName = $input.first().json.body.database_name || \"\";\nlet formattedDate = $input.first().json.formattedDate || \"\";\n \n// 3. Clean & normalize (remove extra spaces, handle missing values)\nbackupName = String(backupName).trim();\nformattedDate = String(formattedDate).trim();\n \n// Fallbacks if values are missing\nif (!backupName) {\n  backupName = \"UnknownBackup\";\n}\nif (!formattedDate) {\n  // fallback to YYYY-MM-DD if formattedDate is missing\n  const today = new Date();\n  formattedDate = today.toISOString().split('T')[0];\n}\n\n// 4. Create the unique key\nconst unique_key = `${backupName}_${formattedDate}`;\n\n// 5. Return the original data + new field\nreturn [{\n  json: {\n    ...item.json,              // keep all original fields (Backup Name, Db, Media, etc.)\n    unique_key: unique_key,    // the new field you wanted\n    // Optional debug fields – remove later if not needed\n    // debug_backupName: backupName,\n    // debug_formattedDate: formattedDate\n    Database: $input.first().json.body.has_db,\n    media: $input.first().json.body.has_media_dir\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        -48
+      ],
+      "id": "c3de2956-de60-436a-a6dd-b4241a0960ee",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Date & Time1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "versionId": "f506ec20-8d15-4e1c-8aea-be71dd16933d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bfefda8b8561e999840c4adfac23e386ed9e4cb2425c2372729c1876c847c669"
+  },
+  "id": "OzzC7rjekWCM6Tma",
+  "tags": []
+}
